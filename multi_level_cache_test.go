@@ -283,7 +283,7 @@ func TestRedisMapCache(t *testing.T) {
 		Addr: s.Addr(),
 	})
 
-	l2 := rediscache.NewRedisCache[string, int](rdb, time.Hour).SetPrefix("pre:")
+	l2 := rediscache.NewRedisCache[string, int](rdb, time.Hour).SetPrefix("pre:").SetMiddleware(rediscache.MetricsMiddleware[string, int]("test")).ToStore()
 	l1 := &localMapCache{data: map[string]int{
 		"k1": 1,
 		"k2": 2,

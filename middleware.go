@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/mbeoliero/tiercache/store"
 )
 
-type Middleware[K comparable, V any] func(next CacheStore[K, V]) CacheStore[K, V]
-
 type loggerWrapper[K comparable, V any] struct {
-	next CacheStore[K, V]
+	next store.Interface[K, V]
 }
 
 // LoggerMiddleware 是一个工厂函数，用于创建日志中间件
-func LoggerMiddleware[K comparable, V any]() Middleware[K, V] {
-	return func(next CacheStore[K, V]) CacheStore[K, V] {
+func LoggerMiddleware[K comparable, V any]() store.Middleware[K, V] {
+	return func(next store.Interface[K, V]) store.Interface[K, V] {
 		return &loggerWrapper[K, V]{
 			next: next,
 		}

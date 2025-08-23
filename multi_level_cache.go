@@ -5,28 +5,30 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+
+	"github.com/mbeoliero/tiercache/store"
 )
 
 type LevelCache[K comparable, V any] struct {
-	Store       CacheStore[K, V]
-	Middlewares []Middleware[K, V]
+	Store       store.Interface[K, V]
+	Middlewares []store.Middleware[K, V]
 }
 
 type MultiLevelCache[K comparable, V any] struct {
-	stores      []CacheStore[K, V]
-	middlewares []Middleware[K, V]
+	stores      []store.Interface[K, V]
+	middlewares []store.Middleware[K, V]
 
 	sync.RWMutex
 	built atomic.Bool
 }
 
-func NewMultiLevelCache[K comparable, V any](stores ...CacheStore[K, V]) *MultiLevelCache[K, V] {
+func NewMultiLevelCache[K comparable, V any](stores ...store.Interface[K, V]) *MultiLevelCache[K, V] {
 	return &MultiLevelCache[K, V]{
 		stores: stores,
 	}
 }
 
-func (c *MultiLevelCache[K, V]) Use(middleware Middleware[K, V]) *MultiLevelCache[K, V] {
+func (c *MultiLevelCache[K, V]) Use(middleware store.Middleware[K, V]) *MultiLevelCache[K, V] {
 	c.middlewares = append(c.middlewares, middleware)
 	return c
 }
@@ -36,15 +38,9 @@ func (c *MultiLevelCache[K, V]) Build() *MultiLevelCache[K, V] {
 		return c
 	}
 
-	var finalStores []CacheStore[K, V]
+	var finalStores []store.Interface[K, V]
 	for i := 0; i < len(c.stores); i++ {
-		store := c.stores[i]
-		wrapStore := store
-		for j := len(c.middlewares) - 1; j >= 0; j-- {
-			wrapStore = c.middlewares[j](wrapStore)
-		}
-
-		finalStores = append(finalStores, wrapStore)
+		finalStores = append(finalStores, store.WrapperStore(c.stores[i], c.middlewares...))
 	}
 
 	c.RWMutex.Lock()

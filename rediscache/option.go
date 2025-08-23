@@ -1,12 +1,15 @@
 package rediscache
 
-type Option[K comparable, T any] struct {
-	Codec  Codec[T]
+import "github.com/mbeoliero/tiercache/store"
+
+type Option[K comparable, V any] struct {
+	Codec  Codec[V]
 	Logger Logger
+	Mws    []store.Middleware[K, V]
 }
 
-func defaultOption[K comparable, T any]() *Option[K, T] {
-	return &Option[K, T]{
-		Codec: &JsonCodec[T]{},
+func defaultOption[K comparable, V any]() *Option[K, V] {
+	return &Option[K, V]{
+		Codec: &JsonCodec[V]{},
 	}
 }

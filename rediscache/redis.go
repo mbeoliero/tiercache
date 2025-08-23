@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/mbeoliero/tiercache/store"
 	"github.com/mbeoliero/tiercache/utils"
 	"github.com/redis/go-redis/v9"
 )
@@ -37,6 +38,15 @@ func (r *RedisCache[K, V]) SetCodec(codec Codec[V]) *RedisCache[K, V] {
 func (r *RedisCache[K, V]) SetLogger(logger Logger) *RedisCache[K, V] {
 	r.opt.Logger = logger
 	return r
+}
+
+func (r *RedisCache[K, V]) SetMiddleware(mws ...store.Middleware[K, V]) *RedisCache[K, V] {
+	r.opt.Mws = append(r.opt.Mws, mws...)
+	return r
+}
+
+func (r *RedisCache[K, V]) ToStore() store.Interface[K, V] {
+	return store.WrapperStore(r, r.opt.Mws...)
 }
 
 func (r *RedisCache[K, V]) MGet(ctx context.Context, keys []K) (map[K]V, []K, error) {
