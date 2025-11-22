@@ -5,8 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/mbeoliero/tiercache/store"
-	"github.com/mbeoliero/tiercache/utils"
+	"github.com/mbeoliero/tiercache/cacher"
+	"github.com/mbeoliero/tiercache/codec"
+	"github.com/mbeoliero/tiercache/internal/convert"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -30,7 +31,7 @@ func (r *RedisCache[K, V]) SetPrefix(prefix string) *RedisCache[K, V] {
 	return r
 }
 
-func (r *RedisCache[K, V]) SetCodec(codec Codec[V]) *RedisCache[K, V] {
+func (r *RedisCache[K, V]) SetCodec(codec codec.Codec[V]) *RedisCache[K, V] {
 	r.opt.Codec = codec
 	return r
 }
@@ -40,13 +41,13 @@ func (r *RedisCache[K, V]) SetLogger(logger Logger) *RedisCache[K, V] {
 	return r
 }
 
-func (r *RedisCache[K, V]) SetMiddleware(mws ...store.Middleware[K, V]) *RedisCache[K, V] {
+func (r *RedisCache[K, V]) SetMiddleware(mws ...cacher.Middleware[K, V]) *RedisCache[K, V] {
 	r.opt.Mws = append(r.opt.Mws, mws...)
 	return r
 }
 
-func (r *RedisCache[K, V]) ToStore() store.Interface[K, V] {
-	return store.WrapperStore(r, r.opt.Mws...)
+func (r *RedisCache[K, V]) ToStore() cacher.Interface[K, V] {
+	return cacher.WrapperStore(r, r.opt.Mws...)
 }
 
 func (r *RedisCache[K, V]) MGet(ctx context.Context, keys []K) (map[K]V, []K, error) {
@@ -165,5 +166,9 @@ func (r *RedisCache[K, T]) getRedisKeys(keys []K) []string {
 }
 
 func (r *RedisCache[K, T]) getRedisKey(k K) string {
-	return r.prefix + utils.ToString(k)
+	return r.prefix + convert.ToString(k)
+}
+
+func (r *RedisCache[K, V]) Name() string {
+	return "redis_cache"
 }

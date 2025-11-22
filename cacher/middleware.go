@@ -1,15 +1,6 @@
-package store
+package cacher
 
-import "context"
-
-// Interface 定义缓存存储的核心接口
-type Interface[K comparable, V any] interface {
-	MGet(ctx context.Context, keys []K) (map[K]V, []K, error)
-	MSet(ctx context.Context, entities map[K]V) error
-	MDel(ctx context.Context, keys []K) error
-}
-
-// Middleware 定义中间件类型
+// Middleware defines the middleware type
 type Middleware[K comparable, V any] func(next Interface[K, V]) Interface[K, V]
 
 func ChainMw[K comparable, V any](mws ...Middleware[K, V]) Middleware[K, V] {
