@@ -6,8 +6,8 @@ require (
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/json-iterator/go v1.1.12
 	github.com/maypok86/otter/v2 v2.2.1
-	github.com/redis/go-redis/v9 v9.12.1
-	github.com/stretchr/testify v1.10.0
+	github.com/redis/go-redis/v9 v9.17.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
@@ -18,6 +18,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

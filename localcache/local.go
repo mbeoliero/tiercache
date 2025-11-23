@@ -63,3 +63,7 @@ func (r *LocalCache[K, T]) MDel(ctx context.Context, keys []K) error {
 	}
 	return nil
 }
+
+func (r *LocalCache[K, V]) Name() string {
+	return "local_cache"
+}

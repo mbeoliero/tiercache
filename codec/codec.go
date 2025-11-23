@@ -1,4 +1,4 @@
-package rediscache
+package codec
 
 import jsoniter "github.com/json-iterator/go"
 

@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mbeoliero/tiercache/store"
+	"github.com/mbeoliero/tiercache/cacher"
 )
 
 // metricsWrapper 为 Redis 缓存添加指标中间件
 type metricsWrapper[K comparable, V any] struct {
 	name string
-	next store.Interface[K, V]
+	next cacher.Interface[K, V]
 }
 
 // MetricsMiddleware 创建指标收集中间件
-func MetricsMiddleware[K comparable, V any](name string) store.Middleware[K, V] {
-	return func(next store.Interface[K, V]) store.Interface[K, V] {
+func MetricsMiddleware[K comparable, V any](name string) cacher.Middleware[K, V] {
+	return func(next cacher.Interface[K, V]) cacher.Interface[K, V] {
 		return &metricsWrapper[K, V]{
 			name: name,
 			next: next,
@@ -49,4 +49,8 @@ func (m *metricsWrapper[K, V]) MDel(ctx context.Context, keys []K) error {
 		fmt.Printf("[metricsWrapper] MDel took %v, del length: %d\n", time.Since(start), len(keys))
 	}()
 	return m.next.MDel(ctx, keys)
+}
+
+func (m *metricsWrapper[K, V]) Name() string {
+	return m.next.Name()
 }

@@ -41,3 +41,7 @@ func (r *DataSource[K, V]) MSet(ctx context.Context, entities map[K]V) error {
 func (r *DataSource[K, T]) MDel(ctx context.Context, keys []K) error {
 	return nil
 }
+
+func (r *DataSource[K, V]) Name() string {
+	return "data_source"
+}

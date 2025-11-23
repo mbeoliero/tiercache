@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/mbeoliero/tiercache/cacher"
+	"github.com/mbeoliero/tiercache/middleware"
 	"github.com/mbeoliero/tiercache/rediscache"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -108,7 +110,7 @@ func TestL2Cache(t *testing.T) {
 
 	//
 	{
-		// 当前层出现error，需要用上层的数据
+		// Current layer error, should use data from upper layer
 		l1 := LocalCache{data: map[string]string{}, err: errors.New("1")}
 		l2 := LocalCache{data: map[string]string{"1": "1"}}
 		mld := NewMultiLevelCache[string, string](l1, l2)
@@ -127,7 +129,9 @@ func TestL3Cache(t *testing.T) {
 		l2 := LocalCache{data: map[string]string{"2": "2"}}
 		l3 := LocalCache{data: map[string]string{"3": "3"}}
 		mld := NewMultiLevelCache[string, string](l1, l2, l3)
-		v, err := mld.MGet(context.TODO(), []string{"1"}, WithGetLevel(1))
+		v, err := mld.MGet(context.TODO(), []string{"1"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() == 1
+		}))
 		assert.Nil(t, err)
 		assert.Equal(t, v["1"], "")
 
@@ -135,7 +139,9 @@ func TestL3Cache(t *testing.T) {
 		assert.Equal(t, l2.data, map[string]string{"2": "2"})
 		assert.Equal(t, l3.data, map[string]string{"3": "3"})
 
-		v, err = mld.MGet(context.TODO(), []string{"2"}, WithGetLevel(1))
+		v, err = mld.MGet(context.TODO(), []string{"2"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() == 1
+		}))
 		assert.Nil(t, err)
 		assert.Equal(t, v["2"], "2")
 
@@ -143,7 +149,9 @@ func TestL3Cache(t *testing.T) {
 		assert.Equal(t, l2.data, map[string]string{"2": "2"})
 		assert.Equal(t, l3.data, map[string]string{"3": "3"})
 
-		v, err = mld.MGet(context.TODO(), []string{"3"}, WithGetLevel(1))
+		v, err = mld.MGet(context.TODO(), []string{"3"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() == 1
+		}))
 		assert.Nil(t, err)
 		assert.Equal(t, v["3"], "3")
 
@@ -151,7 +159,9 @@ func TestL3Cache(t *testing.T) {
 		assert.Equal(t, l2.data, map[string]string{"2": "2", "3": "3"})
 		assert.Equal(t, l3.data, map[string]string{"3": "3"})
 
-		v, err = mld.MGet(context.TODO(), []string{"3"}, WithGetLevel(2))
+		v, err = mld.MGet(context.TODO(), []string{"3"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() <= 2
+		}))
 		assert.Nil(t, err)
 		assert.Equal(t, v["3"], "3")
 
@@ -172,8 +182,10 @@ func TestL4Cache(t *testing.T) {
 		l2 := LocalCache{data: map[string]string{"2": "2"}, name: "l2"}
 		l3 := LocalCache{data: map[string]string{"3": "3"}, name: "l3"}
 		l4 := LocalCache{data: map[string]string{"4": "4"}, name: "l4"}
-		mld := NewMultiLevelCache[string, string](l1, l2, l3, l4).Use(LoggerMiddleware[string, string]()).Build()
-		v, err := mld.MGet(context.TODO(), []string{"1"}, WithGetLevel(1))
+		mld := NewMultiLevelCache[string, string](l1, l2, l3, l4).Use(middleware.LoggerMiddleware[string, string]()).Build()
+		v, err := mld.MGet(context.TODO(), []string{"1"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() == 1
+		}))
 		t.Log("=======")
 		assert.Nil(t, err)
 		assert.Equal(t, v["1"], "")
@@ -182,7 +194,9 @@ func TestL4Cache(t *testing.T) {
 		assert.Equal(t, l2.data, map[string]string{"2": "2"})
 		assert.Equal(t, l3.data, map[string]string{"3": "3"})
 
-		v, err = mld.MGet(context.TODO(), []string{"2"}, WithGetLevel(1))
+		v, err = mld.MGet(context.TODO(), []string{"2"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() == 1
+		}))
 		t.Log("=======")
 		assert.Nil(t, err)
 		assert.Equal(t, v["2"], "2")
@@ -191,7 +205,9 @@ func TestL4Cache(t *testing.T) {
 		assert.Equal(t, l2.data, map[string]string{"2": "2"})
 		assert.Equal(t, l3.data, map[string]string{"3": "3"})
 
-		v, err = mld.MGet(context.TODO(), []string{"3"}, WithGetLevel(1))
+		v, err = mld.MGet(context.TODO(), []string{"3"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() == 1
+		}))
 		t.Log("=======")
 		assert.Nil(t, err)
 		assert.Equal(t, v["3"], "3")
@@ -200,7 +216,9 @@ func TestL4Cache(t *testing.T) {
 		assert.Equal(t, l2.data, map[string]string{"2": "2", "3": "3"})
 		assert.Equal(t, l3.data, map[string]string{"3": "3"})
 
-		v, err = mld.MGet(context.TODO(), []string{"3"}, WithGetLevel(2))
+		v, err = mld.MGet(context.TODO(), []string{"3"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() <= 2
+		}))
 		t.Log("=======")
 		assert.Nil(t, err)
 		assert.Equal(t, v["3"], "3")
@@ -209,7 +227,9 @@ func TestL4Cache(t *testing.T) {
 		assert.Equal(t, l2.data, map[string]string{"2": "2", "3": "3"})
 		assert.Equal(t, l3.data, map[string]string{"3": "3"})
 
-		v, err = mld.MGet(context.TODO(), []string{"3"}, WithGetLevel(3))
+		v, err = mld.MGet(context.TODO(), []string{"3"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() <= 3
+		}))
 		t.Log("=======")
 		assert.Nil(t, err)
 		assert.Equal(t, v["3"], "")
@@ -220,7 +240,9 @@ func TestL4Cache(t *testing.T) {
 		assert.Equal(t, l3.data, map[string]string{})
 		assert.Equal(t, l4.data, map[string]string{"4": "4"})
 
-		v, err = mld.MGet(context.TODO(), []string{"4"}, WithGetLevel(2))
+		v, err = mld.MGet(context.TODO(), []string{"4"}, WithShouldSkipLayer(func(ctx context.Context, info cacher.BaseInfo) bool {
+			return cacher.GetRunInfo(ctx).Level() <= 2
+		}))
 		t.Log("=======")
 		assert.Nil(t, err)
 		assert.Equal(t, v["4"], "4")
@@ -240,6 +262,84 @@ func TestL4Cache(t *testing.T) {
 		assert.Equal(t, l3.data, map[string]string{"4": "4"})
 		assert.Equal(t, l4.data, map[string]string{"4": "4"})
 	}
+}
+
+func TestSkipLayerComplex(t *testing.T) {
+	l1 := LocalCache{data: map[string]string{}, name: "l1"}
+	l2 := LocalCache{data: map[string]string{"key": "val2"}, name: "l2"}
+	l3 := LocalCache{data: map[string]string{"key": "val3"}, name: "l3"}
+	l4 := LocalCache{data: map[string]string{"key": "val4"}, name: "l4"}
+
+	mld := NewMultiLevelCache[string, string](l1, l2, l3, l4)
+
+	// Skip if Level is 2 AND Name is "l2"
+	skipFunc := func(ctx context.Context, info cacher.BaseInfo) bool {
+		return info.Name() == "l2"
+	}
+
+	v, err := mld.MGet(context.TODO(), []string{"key"}, WithShouldSkipLayer(skipFunc))
+	assert.Nil(t, err)
+	// Should skip L2 (val2) and hit L3 (val3)
+	assert.Equal(t, "val3", v["key"])
+
+	// L1 should be backfilled with val3
+	assert.Equal(t, "val3", l1.data["key"])
+	// L2 should be skipped and thus NOT backfilled (it has val2 anyway, but strictly it wasn't touched)
+	assert.Equal(t, "val2", l2.data["key"])
+
+	// Reset L1
+	delete(l1.data, "key")
+
+	// Condition that does NOT skip
+	skipFunc2 := func(ctx context.Context, info cacher.BaseInfo) bool {
+		return cacher.GetRunInfo(ctx).Level() == 2 && info.Name() == "other"
+	}
+
+	v2, err := mld.MGet(context.TODO(), []string{"key"}, WithShouldSkipLayer(skipFunc2))
+	assert.Nil(t, err)
+	// Should hit L2
+	assert.Equal(t, "val2", v2["key"])
+}
+
+func TestLayerErrorFallback(t *testing.T) {
+	// Case 1: Default behavior (fallback on error)
+	l1 := LocalCache{data: map[string]string{}, err: errors.New("l1 error"), name: "l1"}
+	l2 := LocalCache{data: map[string]string{"key": "value"}, name: "l2"}
+
+	mld := NewMultiLevelCache[string, string](l1, l2)
+	v, err := mld.MGet(context.TODO(), []string{"key"})
+	assert.Nil(t, err)
+	assert.Equal(t, "value", v["key"])
+
+	// Case 2: Configured to NOT fallback on error
+	l1 = LocalCache{data: map[string]string{}, err: errors.New("l1 error"), name: "l1"}
+	l2 = LocalCache{data: map[string]string{"key": "value"}, name: "l2"}
+
+	mld = NewMultiLevelCache[string, string](l1, l2)
+
+	// Use WithFallbackOnLayerError to return false (do not fallback)
+	v, err = mld.MGet(context.TODO(), []string{"key"}, WithFallbackOnLayerError(func(ctx context.Context, info cacher.BaseInfo, err error) bool {
+		// Custom logic: if error is "l1 error", do not fallback
+		return err.Error() != "l1 error"
+	}))
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "l1 error", err.Error())
+	assert.Nil(t, v) // mGetRecursive returns nil map on error
+
+	// Case 3: Configured to fallback on specific error
+	l1 = LocalCache{data: map[string]string{}, err: errors.New("recoverable error"), name: "l1"}
+	l2 = LocalCache{data: map[string]string{"key": "value"}, name: "l2"}
+
+	mld = NewMultiLevelCache[string, string](l1, l2)
+
+	v, err = mld.MGet(context.TODO(), []string{"key"}, WithFallbackOnLayerError(func(ctx context.Context, info cacher.BaseInfo, err error) bool {
+		// Custom logic: fallback only if error is "recoverable error"
+		return err.Error() == "recoverable error"
+	}))
+
+	assert.Nil(t, err)
+	assert.Equal(t, "value", v["key"])
 }
 
 type localMapCache struct {
@@ -271,6 +371,10 @@ func (l *localMapCache) MDel(ctx context.Context, keys []string) error {
 		delete(l.data, key)
 	}
 	return nil
+}
+
+func (l *localMapCache) Name() string {
+	return "local-map-cache"
 }
 
 func TestRedisMapCache(t *testing.T) {
